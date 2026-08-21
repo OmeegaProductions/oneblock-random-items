@@ -1,0 +1,5 @@
+name: RandomDropPillarEvent
+version: '1.0'
+main: dev.azn9.op.RdpEventPlugin
+description: Random drop pillar plugin
+api-version: '26.2'

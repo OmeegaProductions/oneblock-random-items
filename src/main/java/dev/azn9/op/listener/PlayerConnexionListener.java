@@ -1,6 +1,7 @@
 package dev.azn9.op.listener;
 
 import dev.azn9.op.data.Game;
+import dev.azn9.op.data.GameMode;
 import dev.azn9.op.service.GameService;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -21,7 +22,7 @@ public class PlayerConnexionListener implements Listener {
             return;
         }
 
-        if (currentGame.getPlayers().remove(event.getPlayer())) {
+        if (currentGame.getGameMode() == GameMode.DUEL && currentGame.getPlayers().remove(event.getPlayer().getUniqueId())) {
             this.gameService.checkWin();
         }
     }

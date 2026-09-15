@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import dev.azn9.op.RdpEventPlugin;
+import dev.azn9.op.data.GameMode;
 import dev.azn9.op.data.GameSettings;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -15,6 +16,7 @@ public class ConfigCommand {
     private static final String INTERVAL_ARGUMENT = "interval";
     private static final String DISTANCE_ARGUMENT = "distance";
     private static final String START_ITEMS_ARGUMENT = "startItems";
+    private static final String MODE_ARGUMENT = "mode";
 
     private ConfigCommand() {
         throw new IllegalStateException("Utility class");
@@ -25,9 +27,20 @@ public class ConfigCommand {
 
         return Commands.literal("config")
                 .requires(commandSourceStack -> commandSourceStack.getSender().isOp())
+                .then(Commands.literal(ConfigCommand.MODE_ARGUMENT)
+                        .then(Commands.literal("cooperation").executes(context -> {
+                            gameSettings.setGameMode(GameMode.COOPERATION);
+                            context.getSource().getSender().sendMessage(Component.text("Le mode de jeu a été configuré à \"Cooperation\"", NamedTextColor.GREEN));
+                            return Command.SINGLE_SUCCESS;
+                        }))
+                        .then(Commands.literal("duel").executes(context -> {
+                            gameSettings.setGameMode(GameMode.DUEL);
+                            context.getSource().getSender().sendMessage(Component.text("Le mode de jeu a été configuré à \"Duel\"", NamedTextColor.GREEN));
+                            return Command.SINGLE_SUCCESS;
+                        })))
                 .then(Commands.literal(ConfigCommand.INTERVAL_ARGUMENT)
                         .executes(context -> {
-                            context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop est de %d seconde(s)" .formatted(
+                            context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop est de %d seconde(s)".formatted(
                                     gameSettings.getSecondsInterval()
                             )));
                             return Command.SINGLE_SUCCESS;
@@ -41,13 +54,13 @@ public class ConfigCommand {
                                     }
 
                                     gameSettings.setSecondsInterval(interval);
-                                    context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop est maintenant de %d seconde(s)" .formatted(interval), NamedTextColor.GREEN));
+                                    context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop est maintenant de %d seconde(s)".formatted(interval), NamedTextColor.GREEN));
 
                                     return Command.SINGLE_SUCCESS;
                                 })))
                 .then(Commands.literal(ConfigCommand.DISTANCE_ARGUMENT)
                         .executes(context -> {
-                            context.getSource().getSender().sendMessage(Component.text("La distance des plateformes est de %d block(s)" .formatted(
+                            context.getSource().getSender().sendMessage(Component.text("La distance des plateformes est de %d block(s)".formatted(
                                     gameSettings.getSpawnDistance()
                             )));
                             return Command.SINGLE_SUCCESS;
@@ -61,13 +74,13 @@ public class ConfigCommand {
                                     }
 
                                     gameSettings.setSpawnDistance(distance);
-                                    context.getSource().getSender().sendMessage(Component.text("La distance des plateformes est maintenant de %d block(s)" .formatted(distance), NamedTextColor.GREEN));
+                                    context.getSource().getSender().sendMessage(Component.text("La distance des plateformes est maintenant de %d block(s)".formatted(distance), NamedTextColor.GREEN));
 
                                     return Command.SINGLE_SUCCESS;
                                 })))
                 .then(Commands.literal(ConfigCommand.START_ITEMS_ARGUMENT)
                         .executes(context -> {
-                            context.getSource().getSender().sendMessage(Component.text("Les joueurs recevront %d item(s) au début de la partie" .formatted(
+                            context.getSource().getSender().sendMessage(Component.text("Les joueurs recevront %d item(s) au début de la partie".formatted(
                                     gameSettings.getStartItems()
                             )));
                             return Command.SINGLE_SUCCESS;
@@ -81,7 +94,7 @@ public class ConfigCommand {
                                     }
 
                                     gameSettings.setStartItems(items);
-                                    context.getSource().getSender().sendMessage(Component.text("Les joueurs recevront maintenant %d item(s) au début de la partie" .formatted(items), NamedTextColor.GREEN));
+                                    context.getSource().getSender().sendMessage(Component.text("Les joueurs recevront maintenant %d item(s) au début de la partie".formatted(items), NamedTextColor.GREEN));
 
                                     return Command.SINGLE_SUCCESS;
                                 })))

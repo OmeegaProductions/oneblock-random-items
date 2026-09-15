@@ -10,6 +10,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.Sound;
 import org.bukkit.World;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 public class GameService {
 
@@ -50,7 +52,7 @@ public class GameService {
 
         for (Player player : this.initialWorld.getPlayers()) {
             if (player.getGameMode() != GameMode.SPECTATOR) {
-                this.currentGame.getPlayers().add(player);
+                this.currentGame.getPlayers().add(player.getUniqueId());
             }
         }
 
@@ -58,10 +60,27 @@ public class GameService {
             throw new IllegalStateException("No players in game");
         }
 
-        List<Player> playersToTeleport = new ArrayList<>(this.currentGame.getPlayers());
+        this.currentGame.setGameMode(this.gameSettings.getGameMode());
 
-        World gameWorld = this.currentGame.getGameWorld();
-        List<Location> spawnLocations = WorldUtil.generateSpawnPoints(gameWorld, this.currentGame.getPlayers().size(), this.gameSettings.getSpawnDistance());
+        List<UUID> playersToTeleport = new ArrayList<>(this.currentGame.getPlayers());
+
+        World gameWorld = this.currentGame.getGameOverworld();
+
+        List<Location> spawnLocations;
+        if (this.gameSettings.getGameMode() == dev.azn9.op.data.GameMode.DUEL) {
+            spawnLocations = WorldUtil.generateSpawnPoints(gameWorld, this.currentGame.getPlayers().size(), this.gameSettings.getSpawnDistance());
+        } else {
+            for (int x = -1; x <= 1; x++) {
+                for (int z = -1; z <= 1; z++) {
+                    gameWorld.getBlockAt(x, 192, z).setType(Material.BEDROCK);
+                }
+            }
+
+            spawnLocations = new ArrayList<>();
+            for (int i = 0; i < playersToTeleport.size(); i++) {
+                spawnLocations.add(new Location(gameWorld, 0.5, 193, 0.5));
+            }
+        }
 
         for (Location spawnLocation : spawnLocations) {
             if (playersToTeleport.isEmpty()) {
@@ -70,9 +89,12 @@ public class GameService {
 
             spawnLocation.getChunk().load();
 
-            Player player = playersToTeleport.removeFirst();
-            player.teleport(spawnLocation);
-            GameService.resetPlayer(player);
+            UUID playerUuid = playersToTeleport.removeFirst();
+            Player player = this.server.getPlayer(playerUuid);
+            if (player != null && player.isOnline()) {
+                player.teleport(spawnLocation);
+                GameService.resetPlayer(player);
+            }
         }
 
         for (Player player : this.initialWorld.getPlayers()) {
@@ -81,8 +103,11 @@ public class GameService {
             }
         }
 
-        for (Player player : this.currentGame.getPlayers()) {
-            player.setGameMode(GameMode.SURVIVAL);
+        for (UUID playerUuid : this.currentGame.getPlayers()) {
+            Player player = this.server.getPlayer(playerUuid);
+            if (player != null && player.isOnline()) {
+                player.setGameMode(GameMode.SURVIVAL);
+            }
         }
 
         this.currentGame.setStarted();
@@ -102,7 +127,12 @@ public class GameService {
     }
 
     private void dropItem() {
-        for (Player player : this.currentGame.getPlayers()) {
+        for (UUID playerUuid : this.currentGame.getPlayers()) {
+            Player player = this.server.getPlayer(playerUuid);
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+
             ItemStack itemStack = ItemUtil.generateRandomItem();
             HashMap<Integer, ItemStack> remainingItems = player.getInventory().addItem(itemStack);
 
@@ -110,8 +140,8 @@ public class GameService {
                 player.getWorld().dropItemNaturally(player.getLocation(), itemStack);
             }
 
-            player.playSound(player, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.1f, 1.0f);
-            player.sendMessage(Component.text("Item reçu : ").append(itemStack.effectiveName()));
+            player.playSound(player, Sound.ENTITY_ITEM_PICKUP, 0.1f, 1.0f);
+//            player.sendMessage(Component.text("Item reçu : ").append(itemStack.effectiveName()));
         }
     }
 
@@ -120,14 +150,18 @@ public class GameService {
             return;
         }
 
-        Set<Player> players = this.currentGame.getPlayers();
+        if (this.currentGame.getGameMode() != dev.azn9.op.data.GameMode.DUEL) {
+            return;
+        }
+
+        Set<UUID> playerUuids = this.currentGame.getPlayers();
         Player winner;
 
-        if (players.isEmpty()) {
-            this.endGame();
+        if (playerUuids.isEmpty()) {
             return;
-        } else if (players.size() == 1) {
-            winner = players.stream().findFirst().get(); // NOSONAR
+        } else if (playerUuids.size() == 1) {
+            //noinspection OptionalGetWithoutIsPresent
+            winner = playerUuids.stream().findFirst().map(this.server::getPlayer).get(); // NOSONAR
         } else {
             return;
         }
@@ -138,10 +172,6 @@ public class GameService {
         if (this.nextDropTask != null) {
             this.nextDropTask.cancel();
         }
-
-        this.server.getGlobalRegionScheduler().runDelayed(this.plugin, _ -> {
-            this.endGame();
-        }, 100L);
     }
 
     public void endGame() {
@@ -152,7 +182,17 @@ public class GameService {
             this.nextDropTask.cancel();
         }
 
-        for (Player player : this.currentGame.getGameWorld().getPlayers()) {
+        for (Player player : this.currentGame.getGameOverworld().getPlayers()) {
+            player.teleport(this.initialWorld.getSpawnLocation());
+            player.setGameMode(GameMode.ADVENTURE);
+            GameService.resetPlayer(player);
+        }
+        for (Player player : this.currentGame.getGameNetherWorld().getPlayers()) {
+            player.teleport(this.initialWorld.getSpawnLocation());
+            player.setGameMode(GameMode.ADVENTURE);
+            GameService.resetPlayer(player);
+        }
+        for (Player player : this.currentGame.getGameEndWorld().getPlayers()) {
             player.teleport(this.initialWorld.getSpawnLocation());
             player.setGameMode(GameMode.ADVENTURE);
             GameService.resetPlayer(player);
@@ -170,6 +210,19 @@ public class GameService {
         player.setSaturation(10);
         player.setExp(0);
         player.setLevel(0);
+    }
+
+    public void playCooperationWin() {
+        this.server.broadcast(Component.text("\nVictoire !\n", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+        this.server.playSound(net.kyori.adventure.sound.Sound.sound(Sound.ENTITY_PLAYER_LEVELUP, net.kyori.adventure.sound.Sound.Source.AMBIENT, 1, 1));
+
+        if (this.nextDropTask != null) {
+            this.nextDropTask.cancel();
+        }
+
+        for (Player player : this.server.getOnlinePlayers()) {
+            player.setGameMode(GameMode.SPECTATOR);
+        }
     }
 
     public GameSettings getGameSettings() {

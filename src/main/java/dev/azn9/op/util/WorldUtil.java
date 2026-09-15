@@ -1,6 +1,8 @@
 package dev.azn9.op.util;
 
+import dev.azn9.op.data.WorldContainer;
 import io.papermc.paper.math.Position;
+import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -16,12 +18,29 @@ public class WorldUtil {
         throw new IllegalStateException("Utility class");
     }
 
-    public static World generateWorld() {
-        return new WorldCreator("game-" + UUID.randomUUID())
-                .hardcore(true)
-                .generator(new EmptyWorldGenerator())
-                .forcedSpawnPosition(Position.block(0, 192, 0), 0, 0)
-                .createWorld();
+    public static WorldContainer generateWorld() {
+        String worldName = "game-" + UUID.randomUUID();
+        WorldContainer container = new WorldContainer(
+                new WorldCreator(worldName)
+                        .generator(new EmptyWorldGenerator())
+                        .environment(World.Environment.NORMAL)
+                        .forcedSpawnPosition(Position.block(0, 192, 0), 0, 0)
+                        .createWorld(),
+                new WorldCreator(worldName + "_nether")
+                        .generator(new EmptyWorldGenerator())
+                        .environment(World.Environment.NETHER)
+                        .createWorld(),
+                new WorldCreator(worldName + "_the_end")
+                        .generator(new EmptyEndWorldGenerator())
+                        .environment(World.Environment.THE_END)
+                        .createWorld()
+        );
+
+        container.overworld().setGameRule(GameRules.KEEP_INVENTORY, true);
+        container.nether().setGameRule(GameRules.KEEP_INVENTORY, true);
+        container.end().setGameRule(GameRules.KEEP_INVENTORY, true);
+
+        return container;
     }
 
     public static List<Location> generateSpawnPoints(World world, int count, double distance) {

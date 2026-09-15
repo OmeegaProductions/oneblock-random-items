@@ -31,7 +31,7 @@ public class GameCommand {
 
                             return Command.SINGLE_SUCCESS;
                         }))
-                .then(Commands.literal("stop")
+                .then(Commands.literal("reset")
                         .executes(context -> {
                             if (!gameService.getCurrentGame().isStarted()) {
                                 context.getSource().getSender().sendMessage(Component.text("La partie n'a pas commencé", NamedTextColor.RED));

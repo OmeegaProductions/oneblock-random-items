@@ -10,7 +10,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPortalEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.event.weather.WeatherChangeEvent;
 
 public class WorldEventsListener implements Listener {
 
@@ -18,11 +17,6 @@ public class WorldEventsListener implements Listener {
 
     public WorldEventsListener(GameService gameService) {
         this.gameService = gameService;
-    }
-
-    @EventHandler
-    public void onWeatherChange(WeatherChangeEvent event) {
-        event.setCancelled(true);
     }
 
     @EventHandler

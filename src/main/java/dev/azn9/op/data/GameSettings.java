@@ -3,7 +3,7 @@ package dev.azn9.op.data;
 public class GameSettings {
 
     private int spawnDistance = 10;
-    private int secondsInterval = 15;
+    private double secondsInterval = 15;
     private int startItems = 3;
     private GameMode gameMode = GameMode.COOPERATION;
 
@@ -15,7 +15,7 @@ public class GameSettings {
         this.spawnDistance = spawnDistance;
     }
 
-    public int getSecondsInterval() {
+    public double getSecondsInterval() {
         return this.secondsInterval;
     }
 
@@ -23,7 +23,7 @@ public class GameSettings {
         return this.gameMode;
     }
 
-    public void setSecondsInterval(int secondsInterval) {
+    public void setSecondsInterval(double secondsInterval) {
         this.secondsInterval = secondsInterval;
     }
 

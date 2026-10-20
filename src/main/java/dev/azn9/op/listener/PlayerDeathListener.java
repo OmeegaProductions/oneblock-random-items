@@ -62,7 +62,7 @@ public class PlayerDeathListener implements Listener {
         }
 
         if (event.isMissingRespawnBlock() || (!event.isBedSpawn() && !event.isAnchorSpawn())) {
-            event.setRespawnLocation(new Location(currentGame.getGameOverworld(), 0.5, 193, 0.5));
+            event.setRespawnLocation(currentGame.getGameOverworld().getSpawnLocation());
         }
     }
 

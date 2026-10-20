@@ -16,12 +16,30 @@ public class Game {
     private WorldContainer worldContainer;
     private boolean started;
     private GameMode gameMode;
+    private GameSettings settings;
+    private boolean ended;
 
     public Game() {
         this.reset();
     }
 
+    public Game(WorldContainer worldContainer) {
+        this.worldContainer = worldContainer;
+        this.started = true;
+    }
+
     public void reset() {
+        this.clearWorlds();
+        this.started = false;
+        this.ended = false;
+        this.players.clear();
+    }
+
+    public void loadWorlds() {
+        this.worldContainer = WorldUtil.generateWorld();
+    }
+
+    public void clearWorlds() {
         if (this.worldContainer != null) {
             Bukkit.getServer().unloadWorld(this.worldContainer.overworld(), false);
             Bukkit.getServer().unloadWorld(this.worldContainer.nether(), false);
@@ -34,10 +52,6 @@ public class Game {
                 throw new IllegalStateException("Failed to delete world!", e);
             }
         }
-
-        this.worldContainer = WorldUtil.generateWorld();
-        this.started = false;
-        this.players.clear();
     }
 
     public boolean isStarted() {
@@ -60,6 +74,10 @@ public class Game {
         return this.worldContainer.end();
     }
 
+    public WorldContainer getWorldContainer() {
+        return this.worldContainer;
+    }
+
     public Set<UUID> getPlayers() {
         return this.players;
     }
@@ -70,5 +88,21 @@ public class Game {
 
     public void setGameMode(GameMode gameMode) {
         this.gameMode = gameMode;
+    }
+
+    public GameSettings getSettings() {
+        return this.settings;
+    }
+
+    public void setSettings(GameSettings settings) {
+        this.settings = settings;
+    }
+
+    public boolean isEnded() {
+        return this.ended;
+    }
+
+    public void setEnded() {
+        this.ended = true;
     }
 }

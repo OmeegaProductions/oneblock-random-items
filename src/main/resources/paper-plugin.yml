@@ -1,6 +1,7 @@
 name: RandomDropPillarEvent
 version: '1.0'
 main: dev.azn9.op.RdpEventPlugin
+bootstrapper: dev.azn9.op.RdpEventPluginBootstrapper
 description: Random drop pillar plugin
-api-version: '26.2'
+api-version: '26.3'
 load: STARTUP

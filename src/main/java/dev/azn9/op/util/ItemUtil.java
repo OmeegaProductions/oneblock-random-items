@@ -20,7 +20,7 @@ public class ItemUtil {
 
         do {
             itemMaterial = Material.values()[ItemUtil.RANDOM.nextInt(Material.values().length)];
-            isValid = itemMaterial.isItem();
+            isValid = itemMaterial.isItem() && !itemMaterial.isLegacy();
         } while (!isValid);
 
         return new ItemStack(itemMaterial);

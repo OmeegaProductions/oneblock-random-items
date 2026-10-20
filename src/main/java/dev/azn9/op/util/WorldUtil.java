@@ -20,11 +20,15 @@ public class WorldUtil {
 
     public static WorldContainer generateWorld() {
         String worldName = "game-" + UUID.randomUUID();
+        return WorldUtil.generateWorld(worldName);
+    }
+
+    public static WorldContainer generateWorld(String worldName) {
         WorldContainer container = new WorldContainer(
                 new WorldCreator(worldName)
                         .generator(new EmptyWorldGenerator())
                         .environment(World.Environment.NORMAL)
-                        .forcedSpawnPosition(Position.block(0, 192, 0), 0, 0)
+                        .forcedSpawnPosition(Position.block(0, 152, 0), 0, 0)
                         .createWorld(),
                 new WorldCreator(worldName + "_nether")
                         .generator(new EmptyWorldGenerator())
@@ -35,10 +39,9 @@ public class WorldUtil {
                         .environment(World.Environment.THE_END)
                         .createWorld()
         );
-
-        container.overworld().setGameRule(GameRules.KEEP_INVENTORY, true);
-        container.nether().setGameRule(GameRules.KEEP_INVENTORY, true);
-        container.end().setGameRule(GameRules.KEEP_INVENTORY, true);
+        container.apply(world -> {
+            world.setGameRule(GameRules.KEEP_INVENTORY, true);
+        });
 
         return container;
     }
@@ -57,7 +60,7 @@ public class WorldUtil {
             Location location = new Location(
                     world,
                     Math.cos(angle * i) * circleRadius,
-                    192,
+                    150,
                     Math.sin(angle * i) * circleRadius
             );
             locations.add(location);

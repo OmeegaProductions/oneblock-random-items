@@ -1,6 +1,7 @@
 package dev.azn9.op.command;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import dev.azn9.op.RdpEventPlugin;
@@ -22,44 +23,48 @@ public class ConfigCommand {
         throw new IllegalStateException("Utility class");
     }
 
-    public static LiteralCommandNode<CommandSourceStack> build(RdpEventPlugin plugin) {
-        GameSettings gameSettings = plugin.getGameService().getGameSettings();
-
+    public static LiteralCommandNode<CommandSourceStack> build() {
         return Commands.literal("config")
                 .requires(commandSourceStack -> commandSourceStack.getSender().isOp())
                 .then(Commands.literal(ConfigCommand.MODE_ARGUMENT)
+                        .executes(context -> {return 0;})
                         .then(Commands.literal("cooperation").executes(context -> {
+                            GameSettings gameSettings = RdpEventPlugin.INSTANCE.getGameSettings();
                             gameSettings.setGameMode(GameMode.COOPERATION);
                             context.getSource().getSender().sendMessage(Component.text("Le mode de jeu a été configuré à \"Cooperation\"", NamedTextColor.GREEN));
                             return Command.SINGLE_SUCCESS;
                         }))
                         .then(Commands.literal("duel").executes(context -> {
+                            GameSettings gameSettings = RdpEventPlugin.INSTANCE.getGameSettings();
                             gameSettings.setGameMode(GameMode.DUEL);
                             context.getSource().getSender().sendMessage(Component.text("Le mode de jeu a été configuré à \"Duel\"", NamedTextColor.GREEN));
                             return Command.SINGLE_SUCCESS;
                         })))
                 .then(Commands.literal(ConfigCommand.INTERVAL_ARGUMENT)
                         .executes(context -> {
-                            context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop est de %d seconde(s)".formatted(
+                            GameSettings gameSettings = RdpEventPlugin.INSTANCE.getGameSettings();
+                            context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop est de %.2f seconde(s)".formatted(
                                     gameSettings.getSecondsInterval()
                             )));
                             return Command.SINGLE_SUCCESS;
                         })
-                        .then(Commands.argument(ConfigCommand.INTERVAL_ARGUMENT, IntegerArgumentType.integer(1))
+                        .then(Commands.argument(ConfigCommand.INTERVAL_ARGUMENT, DoubleArgumentType.doubleArg(0.05))
                                 .executes(context -> {
-                                    int interval = context.getArgument(ConfigCommand.INTERVAL_ARGUMENT, Integer.class);
-                                    if (interval <= 0) {
-                                        context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop doit être au moins égal à 1 seconde", NamedTextColor.RED));
+                                    GameSettings gameSettings = RdpEventPlugin.INSTANCE.getGameSettings();
+                                    double interval = context.getArgument(ConfigCommand.INTERVAL_ARGUMENT, Double.class);
+                                    if (interval < 0.05) {
+                                        context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop doit être au moins égal à 0.05 secondes", NamedTextColor.RED));
                                         return Command.SINGLE_SUCCESS;
                                     }
 
                                     gameSettings.setSecondsInterval(interval);
-                                    context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop est maintenant de %d seconde(s)".formatted(interval), NamedTextColor.GREEN));
+                                    context.getSource().getSender().sendMessage(Component.text("L'intervalle de drop est maintenant de %.2f seconde(s)".formatted(interval), NamedTextColor.GREEN));
 
                                     return Command.SINGLE_SUCCESS;
                                 })))
                 .then(Commands.literal(ConfigCommand.DISTANCE_ARGUMENT)
                         .executes(context -> {
+                            GameSettings gameSettings = RdpEventPlugin.INSTANCE.getGameSettings();
                             context.getSource().getSender().sendMessage(Component.text("La distance des plateformes est de %d block(s)".formatted(
                                     gameSettings.getSpawnDistance()
                             )));
@@ -67,6 +72,7 @@ public class ConfigCommand {
                         })
                         .then(Commands.argument(ConfigCommand.DISTANCE_ARGUMENT, IntegerArgumentType.integer(1))
                                 .executes(context -> {
+                                    GameSettings gameSettings = RdpEventPlugin.INSTANCE.getGameSettings();
                                     int distance = context.getArgument(ConfigCommand.DISTANCE_ARGUMENT, Integer.class);
                                     if (distance <= 0) {
                                         context.getSource().getSender().sendMessage(Component.text("La distance des plateformes doit être au moins égale à 1 block", NamedTextColor.RED));
@@ -80,6 +86,7 @@ public class ConfigCommand {
                                 })))
                 .then(Commands.literal(ConfigCommand.START_ITEMS_ARGUMENT)
                         .executes(context -> {
+                            GameSettings gameSettings = RdpEventPlugin.INSTANCE.getGameSettings();
                             context.getSource().getSender().sendMessage(Component.text("Les joueurs recevront %d item(s) au début de la partie".formatted(
                                     gameSettings.getStartItems()
                             )));
@@ -87,6 +94,7 @@ public class ConfigCommand {
                         })
                         .then(Commands.argument(ConfigCommand.START_ITEMS_ARGUMENT, IntegerArgumentType.integer(0))
                                 .executes(context -> {
+                                    GameSettings gameSettings = RdpEventPlugin.INSTANCE.getGameSettings();
                                     int items = context.getArgument(ConfigCommand.START_ITEMS_ARGUMENT, Integer.class);
                                     if (items < 0) {
                                         context.getSource().getSender().sendMessage(Component.text("Le nombre d'items au début de la partie doit être au moins 0", NamedTextColor.RED));

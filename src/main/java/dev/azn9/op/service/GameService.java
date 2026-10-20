@@ -1,13 +1,21 @@
 package dev.azn9.op.service;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import dev.azn9.op.data.Game;
 import dev.azn9.op.data.GameSettings;
+import dev.azn9.op.data.WorldContainer;
 import dev.azn9.op.util.ItemUtil;
+import dev.azn9.op.util.WorldContainerTypeAdapter;
 import dev.azn9.op.util.WorldUtil;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -19,6 +27,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,18 +39,52 @@ import java.util.UUID;
 
 public class GameService {
 
-    private final GameSettings gameSettings = new GameSettings();
+    private static final Logger LOGGER = LogManager.getLogger(GameService.class);
+    private static final Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(WorldContainer.class, new WorldContainerTypeAdapter())
+            .create();
+    private static final String GAMEDATA_JSON = "gamedata.json";
+
+    private GameSettings gameSettings = new GameSettings();
     private World initialWorld;
     private JavaPlugin plugin;
     private Server server;
     private Game currentGame;
     private ScheduledTask nextDropTask;
 
-    public void initialize(@NotNull World initialWorld, JavaPlugin plugin) {
-        this.initialWorld = initialWorld;
+    public void initialize(@NotNull Server server, JavaPlugin plugin) {
+        this.initialWorld = server.getWorlds().getFirst();
         this.plugin = plugin;
-        this.server = plugin.getServer();
-        this.currentGame = new Game();
+        this.server = server;
+
+        this.loadGame();
+    }
+
+    private void loadGame() {
+        File dataFolder = this.plugin.getDataFolder();
+        if (!dataFolder.exists()) {
+            dataFolder.mkdirs(); // NOSONAR
+        }
+
+        File gameDataFile = new File(dataFolder, GameService.GAMEDATA_JSON);
+        if (!gameDataFile.exists()) {
+            GameService.LOGGER.info("Starting new game");
+            this.currentGame = new Game();
+            return;
+        }
+
+        try (JsonReader reader = new JsonReader(new FileReader(gameDataFile))) {
+            this.currentGame = GameService.GSON.fromJson(reader, Game.class);
+        } catch (Exception e) {
+            GameService.LOGGER.error("Failed to load game", e);
+            this.currentGame = new Game();
+            return;
+        }
+
+        this.gameSettings = this.currentGame.getSettings();
+
+        GameService.LOGGER.info("Found existing game data, resuming");
+        this.scheduleItemDrop();
     }
 
     public Game getCurrentGame() {
@@ -49,6 +95,8 @@ public class GameService {
         if (this.currentGame.isStarted()) {
             return;
         }
+
+        this.currentGame.loadWorlds();
 
         for (Player player : this.initialWorld.getPlayers()) {
             if (player.getGameMode() != GameMode.SPECTATOR) {
@@ -70,15 +118,15 @@ public class GameService {
         if (this.gameSettings.getGameMode() == dev.azn9.op.data.GameMode.DUEL) {
             spawnLocations = WorldUtil.generateSpawnPoints(gameWorld, this.currentGame.getPlayers().size(), this.gameSettings.getSpawnDistance());
         } else {
-            for (int x = -1; x <= 1; x++) {
-                for (int z = -1; z <= 1; z++) {
-                    gameWorld.getBlockAt(x, 192, z).setType(Material.BEDROCK);
+            for (int x = -3; x <= 3; x++) {
+                for (int z = -3; z <= 3; z++) {
+                    gameWorld.getBlockAt(x, 150, z).setType(Material.BEDROCK);
                 }
             }
 
             spawnLocations = new ArrayList<>();
             for (int i = 0; i < playersToTeleport.size(); i++) {
-                spawnLocations.add(new Location(gameWorld, 0.5, 193, 0.5));
+                spawnLocations.add(new Location(gameWorld, 0.5, 151, 0.5));
             }
         }
 
@@ -110,7 +158,21 @@ public class GameService {
             }
         }
 
+        this.currentGame.setSettings(this.gameSettings);
         this.currentGame.setStarted();
+
+        File gameDataFile = new File(this.plugin.getDataFolder(), GameService.GAMEDATA_JSON);
+        try {
+            Files.deleteIfExists(gameDataFile.toPath());
+        } catch (Exception e) {
+            GameService.LOGGER.error("Failed to delete gamedata.json", e);
+        }
+
+        try (JsonWriter writer = new JsonWriter(new FileWriter(gameDataFile))) {
+            GameService.GSON.toJson(this.currentGame, Game.class, writer);
+        } catch (Exception e) {
+            GameService.LOGGER.error("Failed to save gamedata.json", e);
+        }
 
         for (int i = 0; i < this.gameSettings.getStartItems(); i++) {
             this.dropItem();
@@ -123,26 +185,31 @@ public class GameService {
         this.nextDropTask = this.server.getGlobalRegionScheduler().runDelayed(this.plugin, _ -> {
             this.dropItem();
             this.scheduleItemDrop();
-        }, this.gameSettings.getSecondsInterval() * 20L);
+        }, (long) (this.gameSettings.getSecondsInterval() * 20D));
     }
 
     private void dropItem() {
-        for (UUID playerUuid : this.currentGame.getPlayers()) {
-            Player player = this.server.getPlayer(playerUuid);
-            if (player == null || !player.isOnline()) {
-                continue;
+        this.currentGame.getWorldContainer().apply(world -> {
+            for (Player player : world.getPlayers()) {
+                this.dropItemToPlayer(player);
             }
+        });
+    }
 
-            ItemStack itemStack = ItemUtil.generateRandomItem();
-            HashMap<Integer, ItemStack> remainingItems = player.getInventory().addItem(itemStack);
-
-            if (!remainingItems.isEmpty()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), itemStack);
-            }
-
-            player.playSound(player, Sound.ENTITY_ITEM_PICKUP, 0.1f, 1.0f);
-//            player.sendMessage(Component.text("Item reçu : ").append(itemStack.effectiveName()));
+    private void dropItemToPlayer(Player player) {
+        if (player == null || !player.isOnline() || player.getGameMode() == GameMode.SPECTATOR) {
+            return;
         }
+
+        ItemStack itemStack = ItemUtil.generateRandomItem();
+        HashMap<Integer, ItemStack> remainingItems = player.getInventory().addItem(itemStack);
+
+        if (!remainingItems.isEmpty()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), itemStack);
+        }
+
+        player.playSound(player, Sound.ENTITY_ITEM_PICKUP, 0.1f, 1.0f);
+        player.sendActionBar(itemStack.effectiveName());
     }
 
     public void checkWin() {
@@ -198,6 +265,13 @@ public class GameService {
             GameService.resetPlayer(player);
         }
 
+        File gameDataFile = new File(this.plugin.getDataFolder(), GameService.GAMEDATA_JSON);
+        try {
+            Files.deleteIfExists(gameDataFile.toPath());
+        } catch (Exception e) {
+            GameService.LOGGER.error("Failed to delete gamedata.json", e);
+        }
+
         this.currentGame.reset();
     }
 
@@ -213,15 +287,16 @@ public class GameService {
     }
 
     public void playCooperationWin() {
+        if (this.currentGame.isEnded()) {
+            return;
+        }
+        this.currentGame.setEnded();
+
         this.server.broadcast(Component.text("\nVictoire !\n", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
         this.server.playSound(net.kyori.adventure.sound.Sound.sound(Sound.ENTITY_PLAYER_LEVELUP, net.kyori.adventure.sound.Sound.Source.AMBIENT, 1, 1));
 
         if (this.nextDropTask != null) {
             this.nextDropTask.cancel();
-        }
-
-        for (Player player : this.server.getOnlinePlayers()) {
-            player.setGameMode(GameMode.SPECTATOR);
         }
     }
 

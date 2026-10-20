@@ -15,13 +15,12 @@ public class GameCommand {
         throw new IllegalStateException("Utility class");
     }
 
-    public static LiteralCommandNode<CommandSourceStack> build(RdpEventPlugin plugin) {
-        GameService gameService = plugin.getGameService();
-
+    public static LiteralCommandNode<CommandSourceStack> build() {
         return Commands.literal("game")
                 .requires(commandSourceStack -> commandSourceStack.getSender().isOp())
                 .then(Commands.literal("start")
                         .executes(context -> {
+                            GameService gameService = RdpEventPlugin.INSTANCE.getGameService();
                             if (gameService.getCurrentGame().isStarted()) {
                                 context.getSource().getSender().sendMessage(Component.text("La partie est déjà en cours", NamedTextColor.RED));
                                 return Command.SINGLE_SUCCESS;
@@ -33,6 +32,7 @@ public class GameCommand {
                         }))
                 .then(Commands.literal("reset")
                         .executes(context -> {
+                            GameService gameService = RdpEventPlugin.INSTANCE.getGameService();
                             if (!gameService.getCurrentGame().isStarted()) {
                                 context.getSource().getSender().sendMessage(Component.text("La partie n'a pas commencé", NamedTextColor.RED));
                                 return Command.SINGLE_SUCCESS;

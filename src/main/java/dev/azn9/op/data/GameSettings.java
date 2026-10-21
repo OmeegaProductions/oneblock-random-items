@@ -4,7 +4,7 @@ public class GameSettings {
 
     private int spawnDistance = 10;
     private double secondsInterval = 15;
-    private int startItems = 3;
+    private int startItems = 1;
     private GameMode gameMode = GameMode.COOPERATION;
 
     public int getSpawnDistance() {

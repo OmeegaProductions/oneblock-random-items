@@ -118,11 +118,7 @@ public class GameService {
         if (this.gameSettings.getGameMode() == dev.azn9.op.data.GameMode.DUEL) {
             spawnLocations = WorldUtil.generateSpawnPoints(gameWorld, this.currentGame.getPlayers().size(), this.gameSettings.getSpawnDistance());
         } else {
-            for (int x = -3; x <= 3; x++) {
-                for (int z = -3; z <= 3; z++) {
-                    gameWorld.getBlockAt(x, 150, z).setType(Material.BEDROCK);
-                }
-            }
+            gameWorld.getBlockAt(0, 150, 0).setType(Material.GRASS_BLOCK);
 
             spawnLocations = new ArrayList<>();
             for (int i = 0; i < playersToTeleport.size(); i++) {

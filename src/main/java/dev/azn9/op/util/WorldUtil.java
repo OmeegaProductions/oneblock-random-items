@@ -7,6 +7,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
+import org.bukkit.block.Block;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,7 @@ public class WorldUtil {
                         .createWorld()
         );
         container.apply(world -> {
-            world.setGameRule(GameRules.KEEP_INVENTORY, true);
+            world.setGameRule(GameRules.KEEP_INVENTORY, false);
         });
 
         return container;
@@ -66,7 +67,9 @@ public class WorldUtil {
             locations.add(location);
 
             location.setDirection(location.toVector().clone().multiply(-1).setY(0));
-            location.getBlock().setType(Material.BEDROCK);
+            Block block = location.getBlock();
+            location = block.getLocation();
+            block.setType(Material.BEDROCK);
             location.add(0.5, 1.5, 0.5);
         }
 

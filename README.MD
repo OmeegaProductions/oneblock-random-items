@@ -1,4 +1,4 @@
-# One block / random drop / towers etc.
+# OneBlock Random Items
 
 Un plugin minecraft pour 26.3 avec deux modes de jeu basés sur les drop random.
 
@@ -27,4 +27,4 @@ Permet de changer les configurations du plugin :
 - /game start => Lance la partie
 - /game reset => Réinitialise la partie
 
-Si une partie est en cours et que le serveur est éteint, la partie reprend au démarrage.
+Si une partie "coopération" est en cours et que le serveur est éteint, la partie reprend au démarrage.

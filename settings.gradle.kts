@@ -1,1 +1,1 @@
-rootProject.name = "evt-random-drop-pillar"
+rootProject.name = "oneblock-random-items"
